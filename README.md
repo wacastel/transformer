@@ -4,7 +4,7 @@ A from-scratch, state-of-the-art decoder-only Large Language Model (LLM) impleme
 
 ## Overview
 
-This repository contains the complete pipeline for pre-training a language model on the TinyStories dataset. It includes custom implementations of modern architectural breakthroughs that improve upon the vanilla 2017 Transformer, specifically Rotary Positional Embeddings (RoPE), Grouped-Query Attention (GQA), Root Mean Square Normalization (RMSNorm), and SwiGLU activations.
+This repository contains the complete pipeline for pre-training and instruction-tuning a language model on the TinyStories dataset. It includes custom implementations of modern architectural breakthroughs that improve upon the vanilla 2017 Transformer, specifically Rotary Positional Embeddings (RoPE), Grouped-Query Attention (GQA), Root Mean Square Normalization (RMSNorm), and SwiGLU activations.
 
 ## Architecture & Mathematical Theory
 
@@ -55,9 +55,9 @@ The top-level class orchestrates the token embedding, the sequential stack of tr
 
 ---
 
-## Training the Model
+## Phase 1: Pre-Training the Model
 
-The training pipeline tokenizes the dataset, batches the sequences, and optimizes the model using the AdamW optimizer. 
+The pre-training pipeline tokenizes the dataset, batches the sequences, and optimizes the model using the AdamW optimizer to teach foundational grammar and structure.
 
 1. Ensure the required libraries are installed:
    ```bash
@@ -71,21 +71,36 @@ The training pipeline tokenizes the dataset, batches the sequences, and optimize
 
 ---
 
-## Generating Text (Inference)
+## Phase 2: Instruction Tuning (Alignment)
 
-The inference script uses autoregressive generation with temperature scaling and Top-K filtering to produce coherent text.
+To convert the model from a document-completer into a conversational assistant, the pre-trained weights undergo Supervised Fine-Tuning (SFT). The `finetune.py` script automatically wraps the raw dataset in a synthetic conversational template (`<|user|>` and `<|assistant|>`) and trains at a significantly lower learning rate to prevent catastrophic forgetting.
 
-1. Ensure your training loop has completed and the weights file (`tinystories_model_v1.pt`) is present in the root directory.
+1. Ensure the pre-training loop has completed and the weights file (`tinystories_model_v1.pt`) is present.
+2. Execute the fine-tuning script:
+   ```bash
+   python finetune.py
+   ```
+
+---
+
+## Interactive Chat Interface
+
+Once the model has been instruction-tuned, you can interact with it using the dedicated chat script. This interface automatically formats your inputs into the template the model was trained on and streams the generation autoregressively using temperature scaling and Top-K filtering.
+
+1. Ensure the fine-tuned weights file (`tinystories_chat_v1.pt`) is present in the root directory.
 2. Run the interactive generator:
    ```bash
-   python generate.py
+   python chat.py
    ```
-3. Enter a prompt when requested to start the generation sequence. 
+3. Enter a prompt when requested to start the conversation. 
 
 **Example Usage:**
 ```text
-Enter a prompt to start a story (or 'quit' to exit): Link woke up in the Shrine of Resurrection, and 
+==================================================
+🤖 TinyStories Assistant is online.
+Type 'quit' or 'exit' to end the conversation.
+==================================================
 
---- Generating ---
-Link woke up in the Shrine of Resurrection, and looked around the strange room. There was a bright light shining in the corner. He walked over to see what it was...
+You: Please tell me a story about a brave little cat.
+Assistant: Once upon a time, there was a brave little cat. The cat wanted to explore the world...
 ```
